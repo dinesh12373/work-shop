@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Modern AI Chatbot powered by Google Gemini LLM with separated Node.js backend.">
+  <title>Gemini AI Chatbot</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <!-- Markdown parser and syntax highlighter -->
+  <script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/styles/atom-one-dark.min.css">
+  <script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/highlight.min.js"></script>
+  <!-- Supabase JS Client -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app-layout">
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <button class="btn-new-chat" id="btn-new-chat">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+          </svg>
+          <span>New Conversation</span>
+        </button>
+      </div>
+
+      <div class="sidebar-section-title">Saved Chats</div>
+      <div class="chat-history-list" id="chat-history-list">
+        <!-- Rendered dynamically -->
+      </div>
+
+      <div class="sidebar-footer">
+        <div class="persona-selector-wrapper">
+          <label for="persona-select">Persona Preset</label>
+          <select id="persona-select" class="select-input">
+            <option value="helpful">✨ General Assistant</option>
+            <option value="coder">💻 Senior Software Architect</option>
+            <option value="concise">⚡ Quick & Direct Explainer</option>
+            <option value="creative">🎨 Creative Innovator</option>
+          </select>
+        </div>
+        <div class="backend-status-card" id="backend-status-card">
+          <div class="status-indicator">
+            <span class="status-dot" id="backend-status-dot"></span>
+            <span class="status-text" id="backend-status-text">Checking Backend...</span>
+          </div>
+          <div class="api-key-indicator" id="key-status-text">Checking Key...</div>
+          <div class="supabase-status-indicator" id="supabase-status-text">⚡ Supabase: Checking...</div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Sidebar Backdrop for Mobile -->
+    <div class="sidebar-backdrop" id="sidebar-backdrop"></div>
+
+    <!-- Main Container -->
+    <main class="main-content">
+      <!-- Top Navbar -->
+      <header class="top-nav">
+        <div class="nav-left">
+          <button class="btn-icon mobile-menu-btn" id="btn-toggle-sidebar" title="Toggle Sidebar">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="3" y1="12" x2="21" y2="12"></line>
+              <line x1="3" y1="6" x2="21" y2="6"></line>
+              <line x1="3" y1="18" x2="21" y2="18"></line>
+            </svg>
+          </button>
+          <div class="brand">
+            <div class="brand-sparkle">
+              <svg viewBox="0 0 24 24" fill="none" class="sparkle-svg">
+                <path d="M12 2L14.4 9.6L22 12L14.4 14.4L12 22L9.6 14.4L2 12L9.6 9.6L12 2Z" fill="url(#sparkle-grad)" />
+                <defs>
+                  <linearGradient id="sparkle-grad" x1="2" y1="2" x2="22" y2="22" gradientUnits="userSpaceOnUse">
+                    <stop stop-color="#4285F4" />
+                    <stop offset="0.5" stop-color="#9B51E0" />
+                    <stop offset="1" stop-color="#00D2FF" />
+                  </linearGradient>
+                </defs>
+              </svg>
+            </div>
+            <div class="brand-info">
+              <h1>Gemini AI</h1>
+              <span class="brand-tag">v2.5 Flash</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="nav-right">
+          <!-- Model Selector Dropdown -->
+          <div class="model-badge">
+            <svg class="icon model-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="3"></circle>
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+            </svg>
+            <select id="model-select" class="model-select">
+              <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
+              <option value="gemini-2.5-pro">Gemini 2.5 Pro</option>
+              <option value="gemini-1.5-flash">Gemini 1.5 Flash</option>
+              <option value="gemini-1.5-pro">Gemini 1.5 Pro</option>
+            </select>
+          </div>
+
+          <!-- Clear Chat -->
+          <button class="btn-icon" id="btn-clear-chat" title="Clear current chat">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="3 6 5 6 21 6"></polyline>
+              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+            </svg>
+          </button>
+
+          <!-- Settings Button -->
+          <button class="btn-icon" id="btn-open-settings" title="Settings & API Key">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="3"></circle>
+              <path d="M12 1v2m0 18v2M4.22 4.22l1.42 1.42m12.72 12.72l1.42 1.42M1 12h2m18 0h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"></path>
+            </svg>
+          </button>
+        </div>
+      </header>
+
+      <!-- Chat Messages Container -->
+      <div class="chat-viewport" id="chat-viewport">
+        <!-- Hero / Empty State -->
+        <div class="welcome-hero" id="welcome-hero">
+          <div class="hero-glow"></div>
+          <div class="hero-sparkle">
+            <svg viewBox="0 0 36 36" fill="none" class="hero-svg">
+              <path d="M18 3L21.6 14.4L33 18L21.6 21.6L18 33L14.4 21.6L3 18L14.4 14.4L18 3Z" fill="url(#hero-grad)" />
+              <defs>
+                <linearGradient id="hero-grad" x1="3" y1="3" x2="33" y2="33" gradientUnits="userSpaceOnUse">
+                  <stop stop-color="#4285F4" />
+                  <stop offset="0.5" stop-color="#A855F7" />
+                  <stop offset="1" stop-color="#06B6D4" />
+                </linearGradient>
+              </defs>
+            </svg>
+          </div>
+          <h2 class="hero-title">Experience the Power of Gemini</h2>
+          <p class="hero-subtitle">Ask anything, analyze complex concepts, write pristine code, or brainstorm creative ideas.</p>
+
+          <div class="suggestion-grid">
+            <button class="suggestion-card" data-prompt="Explain how LLMs like Gemini work under the hood in simple terms with an analogy.">
+              <span class="card-icon">🧠</span>
+              <div class="card-text">
+                <strong>How Gemini Works</strong>
+                <span>Explain LLMs simply with clear analogies</span>
+              </div>
+            </button>
+
+            <button class="suggestion-card" data-prompt="Write a modern Node.js and Express rate limiter middleware with in-memory sliding window algorithm.">
+              <span class="card-icon">⚡</span>
+              <div class="card-text">
+                <strong>Node.js Rate Limiter</strong>
+                <span>Write code with sliding window algorithm</span>
+              </div>
+            </button>
+
+            <button class="suggestion-card" data-prompt="Draft a persuasive pitch deck outline for an AI-powered developer productivity tool.">
+              <span class="card-icon">💡</span>
+              <div class="card-text">
+                <strong>Startup Pitch Outline</strong>
+                <span>Create a high-impact presentation structure</span>
+              </div>
+            </button>
+
+            <button class="suggestion-card" data-prompt="Compare REST APIs, GraphQL, and gRPC with pros, cons, and best use cases in a markdown table.">
+              <span class="card-icon">📊</span>
+              <div class="card-text">
+                <strong>API Architecture Comparison</strong>
+                <span>Compare REST vs GraphQL vs gRPC</span>
+              </div>
+            </button>
+          </div>
+        </div>
+
+        <!-- Messages List -->
+        <div class="messages-list" id="messages-list">
+          <!-- Injected via app.js -->
+        </div>
+      </div>
+
+      <!-- Input Area -->
+      <div class="chat-input-area">
+        <div class="input-container">
+          <textarea
+            id="chat-textarea"
+            class="chat-textarea"
+            placeholder="Ask Gemini anything... (Shift + Enter for new line)"
+            rows="1"
+          ></textarea>
+
+          <div class="input-actions">
+            <!-- Voice Dictation -->
+            <button class="btn-input-action" id="btn-speech" title="Voice Input (Speech-to-Text)">
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+                <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                <line x1="12" y1="19" x2="12" y2="23"></line>
+                <line x1="8" y1="23" x2="16" y2="23"></line>
+              </svg>
+            </button>
+
+            <!-- Send Button -->
+            <button class="btn-send" id="btn-send" title="Send message">
+              <svg class="icon send-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="22" y1="2" x2="11" y2="13"></line>
+                <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+              </svg>
+            </button>
+          </div>
+        </div>
+        <div class="input-footer-note">
+          <span>Backend: <code id="backend-url-label">http://localhost:5000</code></span>
+          <span>•</span>
+          <span>Dual Key Support (.env or Settings)</span>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Settings Modal -->
+  <div class="modal-overlay" id="settings-modal" style="display: none;">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>Configuration & API Key</h3>
+        <button class="btn-icon" id="btn-close-modal">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+
+      <div class="modal-body">
+        <!-- Gemini API Key -->
+        <div class="form-group">
+          <label for="input-api-key">
+            Gemini API Key
+            <span class="badge-hint">Optional if configured in backend/.env</span>
+          </label>
+          <div class="input-with-button">
+            <input type="password" id="input-api-key" placeholder="AIzaSy..." class="text-input" autocomplete="off" />
+            <button class="btn-secondary" id="btn-toggle-key-visibility" type="button">Show</button>
+          </div>
+          <p class="form-help">
+            Get your free API key at <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener">Google AI Studio</a>.
+          </p>
+        </div>
+
+        <!-- Backend URL -->
+        <div class="form-group">
+          <label for="input-backend-url">Backend Server URL</label>
+          <input type="text" id="input-backend-url" class="text-input" value="http://localhost:5000" />
+          <p class="form-help">Where your separate Node.js backend server is running.</p>
+        </div>
+
+        <!-- Supabase Database Configuration -->
+        <div class="form-group">
+          <label for="input-supabase-url">
+            Supabase Project URL
+            <span class="badge-hint">Configurable in .env or here</span>
+          </label>
+          <input type="text" id="input-supabase-url" placeholder="https://your-project.supabase.co" class="text-input" />
+        </div>
+
+        <div class="form-group">
+          <label for="input-supabase-key">
+            Supabase Anon Public Key
+            <span class="badge-hint">Client-safe public key</span>
+          </label>
+          <div class="input-with-button">
+            <input type="password" id="input-supabase-key" placeholder="eyJhbGciOi..." class="text-input" autocomplete="off" />
+            <button class="btn-secondary" id="btn-toggle-supabase-key" type="button">Show</button>
+          </div>
+          <p class="form-help">
+            From Supabase Dashboard &gt; Project Settings &gt; API.
+          </p>
+        </div>
+
+        <!-- Temperature Slider -->
+        <div class="form-group">
+          <div class="label-with-value">
+            <label for="slider-temperature">Temperature (Creativity)</label>
+            <span class="value-pill" id="val-temperature">0.7</span>
+          </div>
+          <input type="range" id="slider-temperature" min="0" max="1" step="0.1" value="0.7" class="range-slider" />
+          <div class="range-labels">
+            <span>0.0 (Precise / Code)</span>
+            <span>1.0 (Creative)</span>
+          </div>
+        </div>
+
+        <!-- Custom System Instruction -->
+        <div class="form-group">
+          <label for="input-system-prompt">System Instruction</label>
+          <textarea id="input-system-prompt" class="textarea-input" rows="3" placeholder="You are a brilliant and friendly AI assistant..."></textarea>
+        </div>
+
+        <!-- Status Alert Box -->
+        <div class="test-result-box" id="test-result-box" style="display: none;"></div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn-secondary" id="btn-test-supabase">Test Supabase</button>
+        <button class="btn-secondary" id="btn-test-connection">Test Gemini API</button>
+        <button class="btn-primary" id="btn-save-settings">Save & Apply</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification -->
+  <div class="toast" id="toast"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,17 @@
+{
+  "name": "work-shop",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "start": "node backend/server.js",
+    "dev": "node --watch backend/server.js",
+    "backend": "node backend/server.js",
+    "migrate": "node backend/migrate.js",
+    "db:setup": "node backend/migrate.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs"
+}
